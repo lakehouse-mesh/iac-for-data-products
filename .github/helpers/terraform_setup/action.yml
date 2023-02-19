@@ -1,0 +1,29 @@
+name: 'Terraform Setup'
+description: 'Setup Terraform accordingly version provided and install required libraries'
+inputs:
+  terraform_gcp_sa_key:
+    description: 'JSON key for GCP service account'
+    required: true    
+  terraform_version:
+    description: 'Terraform version used'
+    required: true
+    default: 1.3.2
+
+runs:
+  using: "composite"
+  steps:
+    # Install the latest version of Terraform CLI and configure the Terraform CLI configuration file with a Terraform Cloud user API token
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: ${{ inputs.terraform_version }}
+        terraform_wrapper: false
+
+    - id: 'auth'
+      name: 'Authenticate to Google Cloud'
+      uses: 'google-github-actions/auth@v1'
+      with:
+        credentials_json: ${{ inputs.terraform_gcp_sa_key }}
+
+    - name: 'Set up Cloud SDK'
+      uses: 'google-github-actions/setup-gcloud@v0.6.0'

@@ -1,0 +1,99 @@
+name: 'IAC FOR DATA PRODUCTS - CI'
+
+on:
+  pull_request:
+
+env:
+  TERRAFORM_VERSION: "1.3.2"
+  TERRAFORM_DIRECTORY: data_products
+  TF_IN_AUTOMATION: "True"
+  GH_OWNER: lakehouse-mesh
+
+
+permissions:
+  contents: read
+
+jobs:
+  iac_data_product_ci:
+    runs-on: ubuntu-latest
+    if: github.event.review.state != 'approved'
+
+    # Use the Bash shell regardless whether the GitHub Actions runner is ubuntu-latest, macos-latest, or windows-latest
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+    # Checkout the repository to the GitHub Actions runner
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Branch Checks
+      id: branch_check
+      working-directory: ${{ env.TERRAFORM_DIRECTORY }}
+      env:
+        GITHUB_REF: ${{ github.ref }}
+      run: |
+        echo "Running on branch $GITHUB_REF"
+        PR_NUMBER=$(echo $GITHUB_REF | awk 'BEGIN { FS = "/" } ; { print $3 }')
+        echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_OUTPUT
+        if [ "$GITHUB_REF" = "refs/heads/main" ]; then
+          echo "${{ secrets.TF_PROD }}" | base64 --decode > variables.tfvars
+        elif [ "$GITHUB_REF" = "refs/heads/dev" ]; then
+          echo "${{ secrets.TF_DEV }}" | base64 --decode > variables.tfvars
+        else
+          echo "${{ secrets.TF_SANDBOX }}" | base64 --decode > variables.tfvars
+        fi  
+
+    # Install the latest version of Terraform CLI and configure the Terraform CLI configuration file with a Terraform Cloud user API token
+    - name: Terraform Setup
+      uses: ./.github/helpers/terraform_setup
+      with:
+        terraform_version: ${{ env.TERRAFORM_VERSION }}
+        terraform_gcp_sa_key: ${{ secrets.GOOGLE_CREDENTIALS }}
+
+    
+    # Initialize a new or existing Terraform working directory by creating initial files, loading any remote state, downloading modules, etc.
+    - name: Terraform Init
+      id: init
+      working-directory: ${{ env.TERRAFORM_DIRECTORY }}
+      run: terraform init
+
+    # Checks that all Terraform configuration files adhere to a canonical format
+    - name: Terraform Format
+      id: format
+      run: terraform fmt --recursive -check      
+
+    # Generates an execution plan for Terraform
+    - name: Terraform Plan
+      id: plan
+      working-directory: ${{ env.TERRAFORM_DIRECTORY }}
+      env:
+        GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+        GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        GITHUB_OWNER: ${{ env.GH_OWNER }}
+      run: |
+        echo 'plan<<EOF' >> $GITHUB_OUTPUT
+        terraform plan -var='data_product=data-product-a' -var-file=variables.tfvars -no-color -out=tfplan >> $GITHUB_OUTPUT
+        echo 'EOF' >> $GITHUB_OUTPUT         
+
+    # Save plan to be applied
+    - name: Save Artifact
+      id: save-artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ steps.branch_check.outputs.PR_NUMBER }}-tf-plan
+        path: ${{ env.TERRAFORM_DIRECTORY }}/tfplan           
+
+    - name: Comment Plan
+      id: comment-plan
+      uses: peter-evans/create-or-update-comment@v2
+      with:
+        token: ${{ secrets.GH_TOKEN }}
+        issue-number: ${{ steps.branch_check.outputs.PR_NUMBER }}
+        body: |
+          Terraform Plan:
+          ```
+          ${{ steps.plan.outputs.plan }}
+          ```
+          Plan saved to GH artifacts.             
