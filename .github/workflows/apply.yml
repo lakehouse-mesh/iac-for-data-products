@@ -36,8 +36,8 @@ jobs:
       id: pr-id
       env:
         TARGET_BRANCH: ${{ github.base_ref }}
-      run: |        
-        PR_NUMBER=$(echo $GITHUB_REF)
+        PR_NUMBER: ${{ github.event.number }}
+      run: |              
         echo "Pull Request $PR_NUMBER merged, running on branch ${{ env.TARGET_BRANCH }}"
         echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_OUTPUT
         echo "BRANCH=$TARGET_BRANCH" >> $GITHUB_OUTPUT
