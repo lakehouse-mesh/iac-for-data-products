@@ -30,18 +30,19 @@ jobs:
 
     - name: Branch Checks
       id: branch_check
+      working-directory: ${{ env.TERRAFORM_DIRECTORY }}
       env:
-        GITHUB_REF: ${{ inputs.github_ref }}
+        GITHUB_REF: ${{ github.ref }}
       run: |
         echo "Running on branch $GITHUB_REF"
         PR_NUMBER=$(echo $GITHUB_REF | awk 'BEGIN { FS = "/" } ; { print $3 }')
         echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_OUTPUT
         if [ "$GITHUB_REF" = "refs/heads/main" ]; then
-          echo "TF_ENV=${{ vars.TF_PROD }}" >> $GITHUB_OUTPUT
+          echo "${{ secrets.TF_PROD }}" | base64 --decode > variables.tfvars
         elif [ "$GITHUB_REF" = "refs/heads/dev" ]; then
-          echo "TF_ENV=${{ vars.TF_DEV }}" >> $GITHUB_OUTPUT
+          echo "${{ secrets.TF_DEV }}" | base64 --decode > variables.tfvars
         else
-          echo "TF_ENV=${{ vars.TF_SANDBOX }}" >> $GITHUB_OUTPUT
+          echo "${{ secrets.TF_SANDBOX }}" | base64 --decode > variables.tfvars
         fi  
 
     # Install the latest version of Terraform CLI and configure the Terraform CLI configuration file with a Terraform Cloud user API token
@@ -73,7 +74,7 @@ jobs:
         GITHUB_OWNER: ${{ env.GH_OWNER }}
       run: |
         echo 'plan<<EOF' >> $GITHUB_OUTPUT
-        terraform plan -var='data_product=data-product-a' -var=${{ steps.branch_check.outputs.TF_ENV }} -no-color -out=tfplan >> $GITHUB_OUTPUT
+        terraform plan -var='data_product=data-product-a' -var-file=variables.tfvars -no-color -out=tfplan >> $GITHUB_OUTPUT
         echo 'EOF' >> $GITHUB_OUTPUT         
 
     # Save plan to be applied
