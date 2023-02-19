@@ -1,7 +1,33 @@
-name: 'IAC FOR DATA PRODUCTS - CI'
+name: 'TERRAFORM PLAN'
 
 on:
-  pull_request:
+  workflow_call:
+    inputs:
+      terraform_gcp_sa_key:
+        type: string
+        description: 'JSON key for GCP service account'
+        required: true    
+      terraform_version:
+        type: string
+        description: 'Terraform version used'
+        required: true
+        default: 1.3.2
+      pr_number:
+        type: string
+        description: ''
+        required: true
+      branch:
+        type: string
+        description: ''
+        required: true
+      data_product:
+        type: string
+        description: ''
+        required: true
+    env:
+      TERRAFORM_DIRECTORY = 'data_products'
+
+      
 
 env:
   TERRAFORM_VERSION: "1.3.2"
@@ -16,7 +42,6 @@ permissions:
 jobs:
   iac_data_product_ci:
     runs-on: ubuntu-latest
-    if: github.event.review.state != 'approved'
 
     # Use the Bash shell regardless whether the GitHub Actions runner is ubuntu-latest, macos-latest, or windows-latest
     defaults:
@@ -28,69 +53,66 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v3
 
-    - name: Branch Checks
-      id: branch_check
+    # Install the latest version of Terraform CLI and configure the Terraform CLI configuration file with a Terraform Cloud user API token
+    - name: Terraform Setup
+      uses: ./.github/helpers/terraform_setup
+      with:
+        terraform_version: ${{ inputs.terraform_gcp_sa_key }}
+        terraform_gcp_sa_key: ${{ inputs.terraform_gcp_sa_key }}
+
+    # Prepare system environment
+    - name: System Varibles File
+      id: system_variables
       working-directory: ${{ env.TERRAFORM_DIRECTORY }}
       env:
-        GITHUB_REF: ${{ github.ref }}
-        TARGET_BRANCH: ${{ github.base_ref }}
-      run: |
-        echo "Pull Request ${{ env.GITHUB_REF }} target branch ${{ env.TARGET_BRANCH }}"
-        PR_NUMBER=$(echo $GITHUB_REF | awk 'BEGIN { FS = "/" } ; { print $3 }')
-        echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_OUTPUT
-        echo "BRANCH=$TARGET_BRANCH" >> $GITHUB_OUTPUT
+        TARGET_BRANCH: ${{ inputs.branch }}
+      run: |        
         if [ "$TARGET_BRANCH" = "main" ]; then
           echo "${{ secrets.TF_PROD }}" | base64 --decode > variables.tfvars
         elif [ "$TARGET_BRANCH" = "dev" ]; then
           echo "${{ secrets.TF_DEV }}" | base64 --decode > variables.tfvars
         else
           echo "${{ secrets.TF_SANDBOX }}" | base64 --decode > variables.tfvars
-        fi  
-
-    # Install the latest version of Terraform CLI and configure the Terraform CLI configuration file with a Terraform Cloud user API token
-    - name: Terraform Setup
-      uses: ./.github/helpers/terraform_setup
-      with:
-        terraform_version: ${{ env.TERRAFORM_VERSION }}
-        terraform_gcp_sa_key: ${{ secrets.GOOGLE_CREDENTIALS }}
-
+        fi        
     
     # Initialize a new or existing Terraform working directory by creating initial files, loading any remote state, downloading modules, etc.
     - name: Terraform Init
       id: init
-      working-directory: ${{ env.TERRAFORM_DIRECTORY }}
+      working-directory: ${{ inputs.TERRAFORM_DIRECTORY }}
       run: terraform init
 
     # Checks that all Terraform configuration files adhere to a canonical format
     - name: Terraform Format
       id: format
-      run: terraform fmt --recursive -check      
+      run: terraform fmt --recursive -check
 
-    # Generates an execution plan for Terraform
+            
     - name: Terraform Plan
       id: plan
-      uses: ./.github/helpers/terraform_plan
-      with:
-        terraform_directory: ${{ env.TERRAFORM_DIRECTORY }}
-        terraform_gcp_sa_key: ${{ secrets.GOOGLE_CREDENTIALS }}
-        github_token: ${{ secrets.GH_TOKEN }}
-        github_owner: ${{ env.GH_OWNER }}
-        data_product_list: "data-product-a data-product-b"       
+      working-directory: ${{ env.TERRAFORM_DIRECTORY }}
+      env:
+        GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+        GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        GITHUB_OWNER: ${{ env.GH_OWNER }}
+      run: |
+        echo 'plan<<EOF' >> $GITHUB_OUTPUT
+        terraform plan -var='data_product=${{ inputs.data_product }}' -var-file=variables.tfvars -no-color -out='${{ inputs.data_product }}-tfplan' >> $GITHUB_OUTPUT
+        echo 'EOF' >> $GITHUB_OUTPUT         
 
     # Save plan to be applied
     - name: Save Artifact
       id: save-artifact
       uses: actions/upload-artifact@v3
       with:
-        name: ${{ steps.branch_check.outputs.BRANCH }}-tf-plan
-        path: ${{ env.TERRAFORM_DIRECTORY }}/tfplan           
+        name: ${{ inputs.branch }}-${{ inputs.data_product }}-tf-plan
+        path: ${{ env.TERRAFORM_DIRECTORY }}/${{ inputs.data_product }}-tfplan
 
     - name: Comment Plan
       id: comment-plan
       uses: peter-evans/create-or-update-comment@v2
       with:
         token: ${{ secrets.GH_TOKEN }}
-        issue-number: ${{ steps.branch_check.outputs.PR_NUMBER }}
+        issue-number: ${{ inputs.pr_number }}
         body: |
           Terraform Plan:
           ```
