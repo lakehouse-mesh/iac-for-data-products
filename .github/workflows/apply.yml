@@ -1,12 +1,12 @@
 name: 'IAC FOR DATA PRODUCTS - CD'
 
 on:
-  pull_request:
-    types:
-      - closed
+  pull_request_review:
+    types: [submitted]
     branches:
       - main
       - dev
+
 
 env:
   TERRAFORM_VERSION: "1.3.2"
@@ -20,7 +20,7 @@ permissions:
 jobs:
   iac_data_product_cd:
     runs-on: ubuntu-latest
-    if: github.event.pull_request.merged == true
+    if: github.event.review.state == 'approved' && contains(["main", "dev"], github.event.pull_request.base.ref)
 
     # Use the Bash shell regardless whether the GitHub Actions runner is ubuntu-latest, macos-latest, or windows-latest
     defaults:
