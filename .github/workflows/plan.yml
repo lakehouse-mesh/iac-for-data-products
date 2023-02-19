@@ -37,11 +37,11 @@ jobs:
         PR_NUMBER=$(echo $GITHUB_REF | awk 'BEGIN { FS = "/" } ; { print $3 }')
         echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_OUTPUT
         if [ "$GITHUB_REF" = "refs/heads/main" ]; then
-          echo "TF_ENV=${{ env.TF_PROD }}" >> $GITHUB_OUTPUT
+          echo "TF_ENV=${{ vars.TF_PROD }}" >> $GITHUB_OUTPUT
         elif [ "$GITHUB_REF" = "refs/heads/dev" ]; then
-          echo "TF_ENV=${{ env.TF_DEV }}" >> $GITHUB_OUTPUT
+          echo "TF_ENV=${{ vars.TF_DEV }}" >> $GITHUB_OUTPUT
         else
-          echo "TF_ENV=${{ env.TF_SANDBOX }}" >> $GITHUB_OUTPUT
+          echo "TF_ENV=${{ vars.TF_SANDBOX }}" >> $GITHUB_OUTPUT
         fi  
 
     # Install the latest version of Terraform CLI and configure the Terraform CLI configuration file with a Terraform Cloud user API token
