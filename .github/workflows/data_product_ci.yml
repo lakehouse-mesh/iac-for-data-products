@@ -6,10 +6,13 @@ on:
 permissions:
   contents: read
 
+env:
+  GOOGLE_CREDENTIALS = ${{ secrets.GOOGLE_CREDENTIALS }}
+
 jobs:
   terraform_plan:
     if: github.event.review.state != 'approved'
     uses: ./.github/workflows/plan.yml
     with:
       data_product: data-product-a
-      terraform_gcp_sa_key: ${{ secrets.GOOGLE_CREDENTIALS }}
+      terraform_gcp_sa_key: ${{ env.GOOGLE_CREDENTIALS }}
