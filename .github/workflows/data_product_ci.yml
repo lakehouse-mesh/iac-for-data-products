@@ -40,7 +40,7 @@ jobs:
         echo "BRANCH=$TARGET_BRANCH" >> $GITHUB_OUTPUT
   
   terraform_plan:
-    uses: ./.github/worflows/plan.yml
+    uses: ./.github/workflows/plan.yml
     with:
       terraform_version: ${{ env.TERRAFORM_VERSION }}
       terraform_gcp_sa_key: ${{ secrets.GOOGLE_CREDENTIALS }}
