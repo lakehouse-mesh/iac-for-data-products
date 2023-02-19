@@ -32,10 +32,11 @@ jobs:
       id: branch_check
       working-directory: ${{ env.TERRAFORM_DIRECTORY }}
       env:
+        GITHUB_REF: ${{ github.ref }}
         TARGET_BRANCH: ${{ github.base_ref }}
       run: |
+        echo "Pull Request ${{ env.GITHUB_REF }} target branch ${{ env.TARGET_BRANCH }}"
         PR_NUMBER=$(echo $GITHUB_REF | awk 'BEGIN { FS = "/" } ; { print $3 }')
-        echo "Pull Request $PR_NUMBER on target branch ${{ env.TARGET_BRANCH }}"        
         echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_OUTPUT
         echo "BRANCH=$TARGET_BRANCH" >> $GITHUB_OUTPUT
         if [ "$TARGET_BRANCH" = "main" ]; then
