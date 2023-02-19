@@ -2,16 +2,7 @@ name: 'TERRAFORM PLAN'
 
 on:
   workflow_call:
-    inputs:
-      terraform_gcp_sa_key:
-        type: string
-        description: 'JSON key for GCP service account'
-        required: true    
-      terraform_version:
-        type: string
-        description: 'Terraform version used'
-        required: true
-        default: 1.3.2
+    inputs: 
       pr_number:
         type: string
         description: ''
@@ -27,13 +18,12 @@ on:
     env:
       TERRAFORM_DIRECTORY = 'data_products'
 
-      
-
 env:
   TERRAFORM_VERSION: "1.3.2"
   TERRAFORM_DIRECTORY: data_products
   TF_IN_AUTOMATION: "True"
   GH_OWNER: lakehouse-mesh
+  GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
 
 
 permissions:
@@ -57,8 +47,8 @@ jobs:
     - name: Terraform Setup
       uses: ./.github/helpers/terraform_setup
       with:
-        terraform_version: ${{ inputs.terraform_gcp_sa_key }}
-        terraform_gcp_sa_key: ${{ inputs.terraform_gcp_sa_key }}
+        terraform_version: ${{ env.TERRAFORM_VERSION }}
+        terraform_gcp_sa_key: ${{ env.GOOGLE_CREDENTIALS }}
 
     # Prepare system environment
     - name: System Varibles File
