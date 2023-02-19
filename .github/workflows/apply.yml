@@ -1,8 +1,9 @@
 name: 'IAC FOR DATA PRODUCTS - CD'
 
 on:
-  pull_request_review:
-    types: [submitted]
+  pull_request_target:
+    types:
+      - closed
     branches:
       - main
       - dev
