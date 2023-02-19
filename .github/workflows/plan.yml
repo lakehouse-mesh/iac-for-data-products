@@ -68,6 +68,7 @@ jobs:
 
     # Generates an execution plan for Terraform
     - name: Terraform Plan
+      id: plan
       uses: ./.github/helpers/terraform_plan
       with:
         terraform_directory: ${{ env.TERRAFORM_DIRECTORY }}
