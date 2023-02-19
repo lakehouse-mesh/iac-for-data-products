@@ -73,7 +73,7 @@ jobs:
         GITHUB_OWNER: ${{ env.GH_OWNER }}
       run: |
         echo 'plan<<EOF' >> $GITHUB_OUTPUT
-        terraform plan -var='data_product=data-product-a' -var=${{ inputs.tf_system_variable }} -no-color -out=tfplan >> $GITHUB_OUTPUT
+        terraform plan -var='data_product=data-product-a' -var=${{ steps.branch_check.outputs.TF_ENV }} -no-color -out=tfplan >> $GITHUB_OUTPUT
         echo 'EOF' >> $GITHUB_OUTPUT         
 
     # Save plan to be applied
