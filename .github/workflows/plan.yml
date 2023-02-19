@@ -61,7 +61,7 @@ jobs:
       uses: ./.github/helpers/terraform_setup
       with:
         terraform_version: ${{ env.TERRAFORM_VERSION }}
-        terraform_gcp_sa_key: ${{ env.GOOGLE_CREDENTIALS }}
+        terraform_gcp_sa_key: ${{ secrets.GOOGLE_CREDENTIALS }}
 
     
     # Initialize a new or existing Terraform working directory by creating initial files, loading any remote state, downloading modules, etc.
