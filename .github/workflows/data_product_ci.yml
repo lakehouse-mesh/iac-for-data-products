@@ -7,35 +7,8 @@ permissions:
   contents: read
 
 jobs:
-  branch_check:
-    runs-on: ubuntu-latest
-    if: github.event.review.state != 'approved'
-
-    # Use the Bash shell regardless whether the GitHub Actions runner is ubuntu-latest, macos-latest, or windows-latest
-    defaults:
-      run:
-        shell: bash
-
-    steps:
-    # Checkout the repository to the GitHub Actions runner
-    - name: Checkout
-      uses: actions/checkout@v3
-
-    - name: Branch Checks
-      id: branch_check
-      working-directory: ${{ env.TERRAFORM_DIRECTORY }}
-      env:
-        GITHUB_REF: ${{ github.ref }}
-        TARGET_BRANCH: ${{ github.base_ref }}
-      run: |
-        echo "Pull Request ${{ env.GITHUB_REF }} target branch ${{ env.TARGET_BRANCH }}"
-        PR_NUMBER=$(echo $GITHUB_REF | awk 'BEGIN { FS = "/" } ; { print $3 }')
-        echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_OUTPUT
-        echo "BRANCH=$TARGET_BRANCH" >> $GITHUB_OUTPUT
-  
   terraform_plan:
+    if: github.event.review.state != 'approved'
     uses: ./.github/workflows/plan.yml
     with:
-      pr_number: ${{ steps.branch_check.outputs.PR_NUMBER }}
-      branch: ${{ steps.branch_check.outputs.BRANCH }}
       data_product: data-product-a

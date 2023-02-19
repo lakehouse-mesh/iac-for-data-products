@@ -3,14 +3,6 @@ name: 'TERRAFORM PLAN'
 on:
   workflow_call:
     inputs: 
-      pr_number:
-        type: string
-        description: ''
-        required: true
-      branch:
-        type: string
-        description: ''
-        required: true
       data_product:
         type: string
         description: ''
@@ -43,6 +35,29 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v3
 
+    # Checkout the repository to the GitHub Actions runner
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Branch Checks
+      id: branch_check
+      working-directory: ${{ env.TERRAFORM_DIRECTORY }}
+      env:
+        GITHUB_REF: ${{ github.ref }}
+        TARGET_BRANCH: ${{ github.base_ref }}
+      run: |
+        echo "Pull Request ${{ env.GITHUB_REF }} target branch ${{ env.TARGET_BRANCH }}"
+        PR_NUMBER=$(echo $GITHUB_REF | awk 'BEGIN { FS = "/" } ; { print $3 }')
+        echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_OUTPUT
+        echo "BRANCH=$TARGET_BRANCH" >> $GITHUB_OUTPUT    
+        if [ "$TARGET_BRANCH" = "main" ]; then
+          echo "${{ secrets.TF_PROD }}" | base64 --decode > variables.tfvars
+        elif [ "$TARGET_BRANCH" = "dev" ]; then
+          echo "${{ secrets.TF_DEV }}" | base64 --decode > variables.tfvars
+        else
+          echo "${{ secrets.TF_SANDBOX }}" | base64 --decode > variables.tfvars
+        fi             
+
     # Install the latest version of Terraform CLI and configure the Terraform CLI configuration file with a Terraform Cloud user API token
     - name: Terraform Setup
       uses: ./.github/helpers/terraform_setup
@@ -50,20 +65,6 @@ jobs:
         terraform_version: ${{ env.TERRAFORM_VERSION }}
         terraform_gcp_sa_key: ${{ env.GOOGLE_CREDENTIALS }}
 
-    # Prepare system environment
-    - name: System Varibles File
-      id: system_variables
-      working-directory: ${{ env.TERRAFORM_DIRECTORY }}
-      env:
-        TARGET_BRANCH: ${{ inputs.branch }}
-      run: |        
-        if [ "$TARGET_BRANCH" = "main" ]; then
-          echo "${{ secrets.TF_PROD }}" | base64 --decode > variables.tfvars
-        elif [ "$TARGET_BRANCH" = "dev" ]; then
-          echo "${{ secrets.TF_DEV }}" | base64 --decode > variables.tfvars
-        else
-          echo "${{ secrets.TF_SANDBOX }}" | base64 --decode > variables.tfvars
-        fi        
     
     # Initialize a new or existing Terraform working directory by creating initial files, loading any remote state, downloading modules, etc.
     - name: Terraform Init
@@ -94,7 +95,7 @@ jobs:
       id: save-artifact
       uses: actions/upload-artifact@v3
       with:
-        name: ${{ inputs.branch }}-${{ inputs.data_product }}-tf-plan
+        name: ${{ steps.branch_check.outputs.BRANCH }}-${{ inputs.data_product }}-tf-plan
         path: ${{ env.TERRAFORM_DIRECTORY }}/${{ inputs.data_product }}-tfplan
 
     - name: Comment Plan
@@ -102,13 +103,15 @@ jobs:
       uses: peter-evans/create-or-update-comment@v2
       with:
         token: ${{ secrets.GH_TOKEN }}
-        issue-number: ${{ inputs.pr_number }}
+        issue-number: ${{ steps.branch_check.outputs.PR_NUMBER }}
         body: |
           Terraform Plan:
           ```
           ${{ steps.plan.outputs.plan }}
           ```
           Plan saved to GH artifacts.             
+
+
 
 
           
