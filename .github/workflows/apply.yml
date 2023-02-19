@@ -35,10 +35,9 @@ jobs:
     - name: Get PR ID
       id: pr-id
       env:
-        GITHUB_REF: ${{ github.ref }}
         TARGET_BRANCH: ${{ github.base_ref }}
       run: |
-        echo "Pull Request ${{ env.GITHUB_REF }} merged, running on branch ${{ env.TARGET_BRANCH }}"
+        echo "Pull Request $GITHUB_REF merged, running on branch ${{ env.TARGET_BRANCH }}"
         PR_NUMBER=$(echo $GITHUB_REF | awk 'BEGIN { FS = "/" } ; { print $3 }')
         echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_OUTPUT
         echo "BRANCH=$TARGET_BRANCH" >> $GITHUB_OUTPUT
@@ -91,7 +90,7 @@ jobs:
       uses: peter-evans/create-or-update-comment@v2
       with:
         token: ${{ secrets.GH_TOKEN }}
-        issue-number: ${{ steps.pr_id.outputs.PR_NUMBER }}
+        issue-number: ${{ steps.pr-id.outputs.PR_NUMBER }}
         body: |
           Terraform Apply:
           ```
