@@ -1,9 +1,12 @@
 name: 'IAC FOR DATA PRODUCTS - CD'
 
 on:
-  pull_request_review:
+  pull_request:
     types:
-      - submitted
+      - closed
+    branches:
+      - main
+      - dev
 
 env:
   TERRAFORM_VERSION: "1.3.2"
@@ -16,8 +19,8 @@ permissions:
 
 jobs:
   iac_data_product_cd:
-    if: github.event.review.state == 'approved'
-    runs-on: ubuntu-latest    
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true
 
     # Use the Bash shell regardless whether the GitHub Actions runner is ubuntu-latest, macos-latest, or windows-latest
     defaults:
@@ -33,9 +36,9 @@ jobs:
       id: pr-id
       env:
         TARGET_BRANCH: ${{ github.base_ref }}
-      run: |
-        echo "Pull Request $GITHUB_REF merged, running on branch ${{ env.TARGET_BRANCH }}"
-        PR_NUMBER=$(echo $GITHUB_REF | awk 'BEGIN { FS = "/" } ; { print $3 }')
+      run: |        
+        PR_NUMBER=$(echo $GITHUB_REF)
+        echo "Pull Request $PR_NUMBER merged, running on branch ${{ env.TARGET_BRANCH }}"
         echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_OUTPUT
         echo "BRANCH=$TARGET_BRANCH" >> $GITHUB_OUTPUT
 
