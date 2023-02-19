@@ -68,16 +68,13 @@ jobs:
 
     # Generates an execution plan for Terraform
     - name: Terraform Plan
-      id: plan
-      working-directory: ${{ env.TERRAFORM_DIRECTORY }}
-      env:
-        GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
-        GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-        GITHUB_OWNER: ${{ env.GH_OWNER }}
-      run: |
-        echo 'plan<<EOF' >> $GITHUB_OUTPUT
-        terraform plan -var='data_product=data-product-a' -var-file=variables.tfvars -no-color -out=tfplan >> $GITHUB_OUTPUT
-        echo 'EOF' >> $GITHUB_OUTPUT         
+      uses: ./.github/helpers/terraform_plan
+      with:
+        terraform_directory: ${{ env.TERRAFORM_DIRECTORY }}
+        terraform_gcp_sa_key: ${{ secrets.GOOGLE_CREDENTIALS }}
+        github_token: ${{ secrets.GH_TOKEN }}
+        github_owner: ${{ env.GH_OWNER }}
+        data_product_list: "data-product-a data-product-b"       
 
     # Save plan to be applied
     - name: Save Artifact
@@ -99,3 +96,6 @@ jobs:
           ${{ steps.plan.outputs.plan }}
           ```
           Plan saved to GH artifacts.             
+
+
+          
