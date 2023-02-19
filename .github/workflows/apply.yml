@@ -20,7 +20,7 @@ permissions:
 jobs:
   iac_data_product_cd:
     runs-on: ubuntu-latest
-    if: github.event.review.state == 'approved'
+    if: github.event.pull_request.merged == true
 
     # Use the Bash shell regardless whether the GitHub Actions runner is ubuntu-latest, macos-latest, or windows-latest
     defaults:
