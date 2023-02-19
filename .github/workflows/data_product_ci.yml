@@ -12,3 +12,4 @@ jobs:
     uses: ./.github/workflows/plan.yml
     with:
       data_product: data-product-a
+      terraform_gcp_sa_key: ${{ secrets.GOOGLE_CREDENTIALS }}
