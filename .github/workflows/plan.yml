@@ -33,13 +33,15 @@ jobs:
       working-directory: ${{ env.TERRAFORM_DIRECTORY }}
       env:
         GITHUB_REF: ${{ github.ref }}
+        TARGET_BRANCH: ${{ github.base_ref }}
       run: |
-        echo "Running on branch $GITHUB_REF"
+        echo "Pull Request ${{ env.GITHUB_REF }} target branch ${{ env.TARGET_BRANCH }}"
         PR_NUMBER=$(echo $GITHUB_REF | awk 'BEGIN { FS = "/" } ; { print $3 }')
         echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_OUTPUT
-        if [ "$GITHUB_REF" = "refs/heads/main" ]; then
+        echo "BRANCH=$TARGET_BRANCH" >> $GITHUB_OUTPUT
+        if [ "$TARGET_BRANCH" = "main" ]; then
           echo "${{ secrets.TF_PROD }}" | base64 --decode > variables.tfvars
-        elif [ "$GITHUB_REF" = "refs/heads/dev" ]; then
+        elif [ "$TARGET_BRANCH" = "dev" ]; then
           echo "${{ secrets.TF_DEV }}" | base64 --decode > variables.tfvars
         else
           echo "${{ secrets.TF_SANDBOX }}" | base64 --decode > variables.tfvars
@@ -82,7 +84,7 @@ jobs:
       id: save-artifact
       uses: actions/upload-artifact@v3
       with:
-        name: ${{ steps.branch_check.outputs.PR_NUMBER }}-tf-plan
+        name: ${{ steps.branch_check.outputs.BRANCH }}-tf-plan
         path: ${{ env.TERRAFORM_DIRECTORY }}/tfplan           
 
     - name: Comment Plan
