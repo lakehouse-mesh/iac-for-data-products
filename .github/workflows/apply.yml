@@ -1,7 +1,7 @@
 name: 'IAC FOR DATA PRODUCTS - CD'
 
 on:
-  pull_request_target:
+  pull_request:
     types:
       - closed
     branches:
@@ -35,7 +35,7 @@ jobs:
     - name: Get PR ID
       id: pr-id
       env:
-        GITHUB_REF: ${{ github.head_ref }}
+        GITHUB_REF: ${{ github.ref }}
         TARGET_BRANCH: ${{ github.base_ref }}
       run: |
         echo "Pull Request ${{ env.GITHUB_REF }} merged, running on branch ${{ env.TARGET_BRANCH }}"
