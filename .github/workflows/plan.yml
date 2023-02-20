@@ -94,7 +94,7 @@ jobs:
         GITHUB_OWNER: ${{ env.GH_OWNER }}
       run: |
         echo 'plan<<EOF' >> $GITHUB_OUTPUT
-        terraform plan -var='data_product=data-product-a' -var-file=variables.tfvars -no-color -out=tfplan >> $GITHUB_OUTPUT
+        terraform plan -var='data_product=${{ matrix.value }}' -var-file=variables.tfvars -no-color -out=${{ matrix.value }}-tfplan >> $GITHUB_OUTPUT
         echo 'EOF' >> $GITHUB_OUTPUT         
 
     # Save plan to be applied
@@ -102,7 +102,7 @@ jobs:
       id: save-artifact
       uses: actions/upload-artifact@v3
       with:
-        name: ${{ steps.branch_check.outputs.BRANCH }}-tf-plan
+        name: ${{ matrix.value }}-${{ steps.branch_check.outputs.BRANCH }}-tf-plan
         path: ${{ env.TERRAFORM_DIRECTORY }}/tfplan           
 
     - name: Comment Plan
@@ -112,7 +112,7 @@ jobs:
         token: ${{ secrets.GH_TOKEN }}
         issue-number: ${{ steps.branch_check.outputs.PR_NUMBER }}
         body: |
-          Terraform Plan:
+          Terraform Plan for ${{ matrix.value }}:
           ```
           ${{ steps.plan.outputs.plan }}
           ```
