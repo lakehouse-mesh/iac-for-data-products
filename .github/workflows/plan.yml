@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.review.state != 'approved'
     outputs:
-      matrix: ${{ steps.matrix.outputs.vale }}
+      matrix: ${{ steps.matrix.outputs.value }}
 
     defaults:
       run:
@@ -27,7 +27,7 @@ jobs:
       - id: matrix
         run: |
           echo 'value=["data-product-a", "data-product-b"]' >> $GITHUB_OUTPUT
-          
+
   iac_data_product_ci:
     needs: [ data_products_list ]
     runs-on: ubuntu-latest
