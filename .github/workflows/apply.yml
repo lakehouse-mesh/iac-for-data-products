@@ -16,9 +16,25 @@ env:
 
 permissions:
   contents: read
-
 jobs:
+  data_products_list:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true
+    outputs:
+      matrix: ${{ steps.matrix.outputs.value }}
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - id: matrix
+        run: |
+          echo 'value=["data-product-a", "data-product-b"]' >> $GITHUB_OUTPUT
+
+
   iac_data_product_cd:
+    needs: [ data_products_list ]  
     runs-on: ubuntu-latest
     if: github.event.pull_request.merged == true
 
@@ -26,6 +42,10 @@ jobs:
     defaults:
       run:
         shell: bash
+
+    strategy:
+      matrix:
+        value: ${{fromJson(needs.data_products_list.outputs.matrix)}}        
 
     steps:
     # Checkout the repository to the GitHub Actions runner
@@ -66,7 +86,7 @@ jobs:
         github_token:  ${{ secrets.GH_TOKEN }}
         workflow: plan.yml
         pr: ${{ steps.pr-id.outputs.PR_NUMBER }}
-        name: ${{ steps.pr-id.outputs.BRANCH }}-tf-plan
+        name: ${{ matrix.value }}-${{ steps.branch_check.outputs.BRANCH }}-tf-plan
         path: ${{ env.TERRAFORM_DIRECTORY }}
 
 
@@ -80,7 +100,7 @@ jobs:
         GITHUB_OWNER: ${{ env.GH_OWNER }}      
       run: |
         echo 'apply<<EOF' >> $GITHUB_OUTPUT
-        terraform apply -input=false -no-color tfplan >> $GITHUB_OUTPUT
+        terraform apply -input=false -no-color ${{ matrix.value }}-${{ steps.branch_check.outputs.BRANCH }}-tf-plan >> $GITHUB_OUTPUT
         echo 'EOF' >> $GITHUB_OUTPUT               
 
 
@@ -92,6 +112,6 @@ jobs:
         token: ${{ secrets.GH_TOKEN }}
         issue-number: ${{ steps.pr-id.outputs.PR_NUMBER }}
         body: |
-          Terraform Apply:
+          Terraform Apply for ${{ matrix.value }}:
           ```
           ${{ steps.apply.outputs.apply }}     
