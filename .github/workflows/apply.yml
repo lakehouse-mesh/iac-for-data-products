@@ -100,7 +100,7 @@ jobs:
         GITHUB_OWNER: ${{ env.GH_OWNER }}      
       run: |
         echo 'apply<<EOF' >> $GITHUB_OUTPUT
-        terraform apply -input=false -no-color ${{ matrix.value }}-${{ steps.branch_check.outputs.BRANCH }}-tf-plan >> $GITHUB_OUTPUT
+        terraform apply -input=false -no-color ${{ matrix.value }}-${{ steps.pr-id.outputs.BRANCH }}-tf-plan >> $GITHUB_OUTPUT
         echo 'EOF' >> $GITHUB_OUTPUT               
 
 
