@@ -103,7 +103,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: ${{ matrix.value }}-${{ steps.branch_check.outputs.BRANCH }}-tf-plan
-        path: ${{ env.TERRAFORM_DIRECTORY }}/tfplan           
+        path: ${{ env.TERRAFORM_DIRECTORY }}/${{ matrix.value }}-tfplan           
 
     - name: Comment Plan
       id: comment-plan
