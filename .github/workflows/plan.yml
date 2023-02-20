@@ -1,42 +1,49 @@
-name: 'TERRAFORM PLAN'
+name: 'IAC FOR DATA PRODUCTS - CI'
 
 on:
-  workflow_call:
-    inputs: 
-      data_product:
-        type: string
-        description: ''
-        required: true
-      terraform_gcp_sa_key:
-        type: string
-        description: 'JSON key for GCP service account'
-        required: true            
+  pull_request:
 
 env:
   TERRAFORM_VERSION: "1.3.2"
   TERRAFORM_DIRECTORY: data_products
   TF_IN_AUTOMATION: "True"
   GH_OWNER: lakehouse-mesh
-  GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
-
 
 permissions:
   contents: read
 
 jobs:
-  iac_data_product_ci:
+  data_products_list:
     runs-on: ubuntu-latest
+    if: github.event.review.state != 'approved'
+    outputs:
+      matrix: ${{ steps.matrix.outputs.vale }}
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - id: matrix
+        run: |
+          echo '::set-output name=value::[\"data-product-a\", \"data-product-b\"]'
+
+
+  iac_data_product_ci:
+    needs: [ data_products_list ]
+    runs-on: ubuntu-latest
+    if: github.event.review.state != 'approved'
 
     # Use the Bash shell regardless whether the GitHub Actions runner is ubuntu-latest, macos-latest, or windows-latest
     defaults:
       run:
         shell: bash
 
-    steps:
-    # Checkout the repository to the GitHub Actions runner
-    - name: Checkout
-      uses: actions/checkout@v3
+    strategy:
+      matrix:
+        value: ${{fromJson(needs.data_products_list.outputs.matrix)}}
 
+    steps:
     # Checkout the repository to the GitHub Actions runner
     - name: Checkout
       uses: actions/checkout@v3
@@ -51,34 +58,33 @@ jobs:
         echo "Pull Request ${{ env.GITHUB_REF }} target branch ${{ env.TARGET_BRANCH }}"
         PR_NUMBER=$(echo $GITHUB_REF | awk 'BEGIN { FS = "/" } ; { print $3 }')
         echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_OUTPUT
-        echo "BRANCH=$TARGET_BRANCH" >> $GITHUB_OUTPUT    
+        echo "BRANCH=$TARGET_BRANCH" >> $GITHUB_OUTPUT
         if [ "$TARGET_BRANCH" = "main" ]; then
           echo "${{ secrets.TF_PROD }}" | base64 --decode > variables.tfvars
         elif [ "$TARGET_BRANCH" = "dev" ]; then
           echo "${{ secrets.TF_DEV }}" | base64 --decode > variables.tfvars
         else
           echo "${{ secrets.TF_SANDBOX }}" | base64 --decode > variables.tfvars
-        fi             
+        fi  
 
     # Install the latest version of Terraform CLI and configure the Terraform CLI configuration file with a Terraform Cloud user API token
     - name: Terraform Setup
       uses: ./.github/helpers/terraform_setup
       with:
         terraform_version: ${{ env.TERRAFORM_VERSION }}
-        terraform_gcp_sa_key: ${{ inputs.terraform_gcp_sa_key }}
+        terraform_gcp_sa_key: ${{ secrets.GOOGLE_CREDENTIALS }}
 
     
     # Initialize a new or existing Terraform working directory by creating initial files, loading any remote state, downloading modules, etc.
     - name: Terraform Init
       id: init
-      working-directory: ${{ inputs.TERRAFORM_DIRECTORY }}
+      working-directory: ${{ env.TERRAFORM_DIRECTORY }}
       run: terraform init
 
     # Checks that all Terraform configuration files adhere to a canonical format
     - name: Terraform Format
       id: format
       run: terraform fmt --recursive -check
-
             
     - name: Terraform Plan
       id: plan
@@ -89,7 +95,7 @@ jobs:
         GITHUB_OWNER: ${{ env.GH_OWNER }}
       run: |
         echo 'plan<<EOF' >> $GITHUB_OUTPUT
-        terraform plan -var='data_product=${{ inputs.data_product }}' -var-file=variables.tfvars -no-color -out='${{ inputs.data_product }}-tfplan' >> $GITHUB_OUTPUT
+        terraform plan -var='data_product=data-product-a' -var-file=variables.tfvars -no-color -out=tfplan >> $GITHUB_OUTPUT
         echo 'EOF' >> $GITHUB_OUTPUT         
 
     # Save plan to be applied
@@ -97,8 +103,8 @@ jobs:
       id: save-artifact
       uses: actions/upload-artifact@v3
       with:
-        name: ${{ steps.branch_check.outputs.BRANCH }}-${{ inputs.data_product }}-tf-plan
-        path: ${{ env.TERRAFORM_DIRECTORY }}/${{ inputs.data_product }}-tfplan
+        name: ${{ steps.branch_check.outputs.BRANCH }}-tf-plan
+        path: ${{ env.TERRAFORM_DIRECTORY }}/tfplan           
 
     - name: Comment Plan
       id: comment-plan
@@ -112,8 +118,6 @@ jobs:
           ${{ steps.plan.outputs.plan }}
           ```
           Plan saved to GH artifacts.             
-
-
 
 
           
