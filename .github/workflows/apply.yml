@@ -17,7 +17,7 @@ env:
 permissions:
   contents: read
 jobs:
-  data_products_list:
+  GetDataProducts:
     runs-on: ubuntu-latest
     if: github.event.pull_request.merged == true
     outputs:
@@ -33,8 +33,8 @@ jobs:
           echo 'value=["data-product-a", "data-product-b"]' >> $GITHUB_OUTPUT
 
 
-  iac_data_product_cd:
-    needs: [ data_products_list ]  
+  TerraformApply:
+    needs: [ GetDataProducts ]  
     runs-on: ubuntu-latest
     if: github.event.pull_request.merged == true
 
@@ -45,13 +45,14 @@ jobs:
 
     strategy:
       matrix:
-        value: ${{fromJson(needs.data_products_list.outputs.matrix)}}        
+        value: ${{fromJson(needs.GetDataProducts.outputs.matrix)}}        
 
     steps:
     # Checkout the repository to the GitHub Actions runner
     - name: Checkout
       uses: actions/checkout@v3
 
+    # Get PR data (number and merged branch)
     - name: Get PR ID
       id: pr-id
       env:
@@ -104,7 +105,7 @@ jobs:
         echo 'EOF' >> $GITHUB_OUTPUT               
 
 
-    # Save plan applied on the comment
+    # Comment to PR what it was applied
     - name: Comment Apply
       id: comment-apply
       uses: peter-evans/create-or-update-comment@v2
