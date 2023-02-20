@@ -86,7 +86,7 @@ jobs:
         github_token:  ${{ secrets.GH_TOKEN }}
         workflow: plan.yml
         pr: ${{ steps.pr-id.outputs.PR_NUMBER }}
-        name: ${{ matrix.value }}-${{ steps.branch_check.outputs.BRANCH }}-tf-plan
+        name: ${{ matrix.value }}-${{ steps.pr-id.outputs.BRANCH }}-tf-plan
         path: ${{ env.TERRAFORM_DIRECTORY }}
 
 
