@@ -65,7 +65,7 @@ jobs:
 
     # Install the latest version of Terraform CLI and configure the Terraform CLI configuration file with a Terraform Cloud user API token
     - name: Terraform Setup
-      uses: ./.github/helpers/terraform_setup
+      uses: ./.github/terraform_setup
       with:
         terraform_version: ${{ env.TERRAFORM_VERSION }}
         terraform_gcp_sa_key: ${{ secrets.GOOGLE_CREDENTIALS }}
@@ -86,7 +86,7 @@ jobs:
         github_token:  ${{ secrets.GH_TOKEN }}
         workflow: plan.yml
         pr: ${{ steps.pr-id.outputs.PR_NUMBER }}
-        name: ${{ matrix.value }}-${{ steps.pr-id.outputs.BRANCH }}-tf-plan
+        name: ${{ steps.pr-id.outputs.BRANCH }}-${{ matrix.value }}-tfplan
         path: ${{ env.TERRAFORM_DIRECTORY }}
 
 
@@ -100,7 +100,7 @@ jobs:
         GITHUB_OWNER: ${{ env.GH_OWNER }}      
       run: |
         echo 'apply<<EOF' >> $GITHUB_OUTPUT
-        terraform apply -input=false -no-color ${{ matrix.value }}-tf-plan >> $GITHUB_OUTPUT
+        terraform apply -input=false -no-color ${{ matrix.value }}-tfplan >> $GITHUB_OUTPUT
         echo 'EOF' >> $GITHUB_OUTPUT               
 
 
