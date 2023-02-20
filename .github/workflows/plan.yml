@@ -9,12 +9,27 @@ env:
   TF_IN_AUTOMATION: "True"
   GH_OWNER: lakehouse-mesh
 
-
 permissions:
   contents: read
 
 jobs:
+  data_products_list:
+    runs-on: ubuntu-latest
+    if: github.event.review.state != 'approved'
+    outputs:
+      matrix: ${{ steps.matrix.outputs.value }}
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - id: matrix
+        run: |
+          echo 'value=["data-product-a", "data-product-b"]' >> $GITHUB_OUTPUT
+
   iac_data_product_ci:
+    needs: [ data_products_list ]
     runs-on: ubuntu-latest
     if: github.event.review.state != 'approved'
 
@@ -22,6 +37,10 @@ jobs:
     defaults:
       run:
         shell: bash
+
+    strategy:
+      matrix:
+        value: ${{fromJson(needs.data_products_list.outputs.matrix)}}
 
     steps:
     # Checkout the repository to the GitHub Actions runner
@@ -64,9 +83,8 @@ jobs:
     # Checks that all Terraform configuration files adhere to a canonical format
     - name: Terraform Format
       id: format
-      run: terraform fmt --recursive -check      
-
-    # Generates an execution plan for Terraform
+      run: terraform fmt --recursive -check
+            
     - name: Terraform Plan
       id: plan
       working-directory: ${{ env.TERRAFORM_DIRECTORY }}
@@ -76,7 +94,7 @@ jobs:
         GITHUB_OWNER: ${{ env.GH_OWNER }}
       run: |
         echo 'plan<<EOF' >> $GITHUB_OUTPUT
-        terraform plan -var='data_product=data-product-a' -var-file=variables.tfvars -no-color -out=tfplan >> $GITHUB_OUTPUT
+        terraform plan -var='data_product=${{ matrix.value }}' -var-file=variables.tfvars -no-color -out=${{ matrix.value }}-tfplan >> $GITHUB_OUTPUT
         echo 'EOF' >> $GITHUB_OUTPUT         
 
     # Save plan to be applied
@@ -84,8 +102,8 @@ jobs:
       id: save-artifact
       uses: actions/upload-artifact@v3
       with:
-        name: ${{ steps.branch_check.outputs.BRANCH }}-tf-plan
-        path: ${{ env.TERRAFORM_DIRECTORY }}/tfplan           
+        name: ${{ matrix.value }}-${{ steps.branch_check.outputs.BRANCH }}-tf-plan
+        path: ${{ env.TERRAFORM_DIRECTORY }}/${{ matrix.value }}-tfplan           
 
     - name: Comment Plan
       id: comment-plan
@@ -94,8 +112,11 @@ jobs:
         token: ${{ secrets.GH_TOKEN }}
         issue-number: ${{ steps.branch_check.outputs.PR_NUMBER }}
         body: |
-          Terraform Plan:
+          Terraform Plan for ${{ matrix.value }}:
           ```
           ${{ steps.plan.outputs.plan }}
           ```
           Plan saved to GH artifacts.             
+
+
+          
