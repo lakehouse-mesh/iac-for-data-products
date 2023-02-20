@@ -13,7 +13,24 @@ permissions:
   contents: read
 
 jobs:
-  data_products_list:
+  Lint:
+    runs-on: ubuntu-latest
+    if: github.event.review.state != 'approved'
+
+    steps:
+    # Checkout the repository to the GitHub Actions runner
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    # Checks that all Terraform configuration files adhere to a canonical format
+    - name: Terraform Format
+      id: format
+      run: terraform fmt --recursive -check
+
+
+  # Get data product that has changed or created in the PR
+  GetDataProducts:
+    needs: [ Lint ]
     runs-on: ubuntu-latest
     if: github.event.review.state != 'approved'
     outputs:
@@ -28,8 +45,10 @@ jobs:
         run: |
           echo 'value=["data-product-a", "data-product-b"]' >> $GITHUB_OUTPUT
 
-  iac_data_product_ci:
-    needs: [ data_products_list ]
+
+  # Get data product that has changed or created in the PR
+  TerraformPlan:
+    needs: [ GetDataProducts ]
     runs-on: ubuntu-latest
     if: github.event.review.state != 'approved'
 
@@ -40,13 +59,14 @@ jobs:
 
     strategy:
       matrix:
-        value: ${{fromJson(needs.data_products_list.outputs.matrix)}}
+        value: ${{fromJson(needs.GetDataProducts.outputs.matrix)}}
 
     steps:
     # Checkout the repository to the GitHub Actions runner
     - name: Checkout
       uses: actions/checkout@v3
 
+    # Prepare branch with variable files and get PR information
     - name: Branch Checks
       id: branch_check
       working-directory: ${{ env.TERRAFORM_DIRECTORY }}
@@ -80,10 +100,6 @@ jobs:
       working-directory: ${{ env.TERRAFORM_DIRECTORY }}
       run: terraform init
 
-    # Checks that all Terraform configuration files adhere to a canonical format
-    - name: Terraform Format
-      id: format
-      run: terraform fmt --recursive -check
             
     - name: Terraform Plan
       id: plan
@@ -105,6 +121,7 @@ jobs:
         name: ${{ steps.branch_check.outputs.BRANCH }}-${{ matrix.value }}-tfplan
         path: ${{ env.TERRAFORM_DIRECTORY }}/${{ matrix.value }}-tfplan           
 
+    # Comment PR with plan to be applied
     - name: Comment Plan
       id: comment-plan
       uses: peter-evans/create-or-update-comment@v2
