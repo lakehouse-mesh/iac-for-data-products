@@ -26,9 +26,8 @@ jobs:
     steps:
       - id: matrix
         run: |
-          echo '::set-output name=value::[\"data-product-a\", \"data-product-b\"]'
-
-
+          echo 'value=["data-product-a", "data-product-b"]' >> $GITHUB_OUTPUT
+          
   iac_data_product_ci:
     needs: [ data_products_list ]
     runs-on: ubuntu-latest
