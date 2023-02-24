@@ -62,6 +62,13 @@ jobs:
         echo "Pull Request $PR_NUMBER merged, running on branch ${{ env.TARGET_BRANCH }}"
         echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_OUTPUT
         echo "BRANCH=$TARGET_BRANCH" >> $GITHUB_OUTPUT
+        if [ "$TARGET_BRANCH" = "main" ]; then
+          echo "ENVIRONMENT=dev" >> $GITHUB_OUTPUT 
+        elif [ "$TARGET_BRANCH" = "dev" ]; then
+          echo "ENVIRONMENT=prod" >> $GITHUB_OUTPUT 
+        else
+          echo "ENVIRONMENT=sandbox" >> $GITHUB_OUTPUT 
+        fi          
 
 
     # Install the latest version of Terraform CLI and configure the Terraform CLI configuration file with a Terraform Cloud user API token
@@ -76,7 +83,12 @@ jobs:
     - name: Terraform Init
       id: init
       working-directory: ${{ env.TERRAFORM_DIRECTORY }}
-      run: terraform init
+      env:
+        GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+      run: |
+        terraform init --reconfigure \
+          -backend-config=bucket=${{ secrets.BACKEND_BUCKET }} \
+          -backend-config=prefix=${{ steps.pr-id.outputs.ENVIRONMENT }}/${{ matrix.value }}
 
 
     # Download tf_plan generate during CI processs

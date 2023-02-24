@@ -80,10 +80,13 @@ jobs:
         echo "BRANCH=$TARGET_BRANCH" >> $GITHUB_OUTPUT
         if [ "$TARGET_BRANCH" = "main" ]; then
           echo "${{ secrets.TF_PROD }}" | base64 --decode > variables.tfvars
+          echo "ENVIRONMENT=dev" >> $GITHUB_OUTPUT 
         elif [ "$TARGET_BRANCH" = "dev" ]; then
           echo "${{ secrets.TF_DEV }}" | base64 --decode > variables.tfvars
+          echo "ENVIRONMENT=prod" >> $GITHUB_OUTPUT 
         else
           echo "${{ secrets.TF_SANDBOX }}" | base64 --decode > variables.tfvars
+          echo "ENVIRONMENT=sandbox" >> $GITHUB_OUTPUT 
         fi  
 
     # Install the latest version of Terraform CLI and configure the Terraform CLI configuration file with a Terraform Cloud user API token
@@ -98,7 +101,12 @@ jobs:
     - name: Terraform Init
       id: init
       working-directory: ${{ env.TERRAFORM_DIRECTORY }}
-      run: terraform init
+      env:
+        GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+      run: |
+        terraform init --reconfigure \
+          -backend-config=bucket=${{ secrets.BACKEND_BUCKET }} \
+          -backend-config=prefix=${{ steps.branch_check.outputs.ENVIRONMENT }}/${{ matrix.value }}
 
             
     - name: Terraform Plan

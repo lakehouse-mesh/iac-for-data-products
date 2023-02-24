@@ -29,6 +29,7 @@ variable "system" {
     organization_name   = string
     organization_prefix = string
     region              = string
+    billing_account_id  = string
   })
   description = "System environment variables passed through TF_VARs parameter"
 }
@@ -41,7 +42,7 @@ variable "system" {
 # Optout variable for resources that needs to be created within specific environments
 locals {
   environment_optout = !contains(var.data_product.environment, var.system.environment)
-  github_optout      = !contains([["dev"], var.system.environment]) #Github repository is only created when run to DEV
+  github_optout      = !contains(["dev"], var.system.environment) #Github repository is only created when run to DEV
 }
 
 # Resources to set role and permissions to Actors

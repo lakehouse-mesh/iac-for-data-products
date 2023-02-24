@@ -40,4 +40,5 @@ No modules.
 | <a name="output_full_name"></a> [full\_name](#output\_full\_name) | A string of the form 'orgname/reponame'. |
 | <a name="output_git_clone_url"></a> [git\_clone\_url](#output\_git\_clone\_url) | URL that can be provided to git clone to clone the repository anonymously via the git protocol. |
 | <a name="output_id"></a> [id](#output\_id) | GitHub ID for the repository. |
+| <a name="output_name"></a> [name](#output\_name) | A string of the form 'reponame'. |
 <!-- END_TF_DOCS -->

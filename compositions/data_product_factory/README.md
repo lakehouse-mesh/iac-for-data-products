@@ -12,8 +12,8 @@
 | Name | Version |
 |------|---------|
 | <a name="provider_github"></a> [github](#provider\_github) | 5.9.0 |
-| <a name="provider_google"></a> [google](#provider\_google) | 4.53.1 |
-| <a name="provider_random"></a> [random](#provider\_random) | 3.4.3 |
+| <a name="provider_google"></a> [google](#provider\_google) | >=4.0, < 5.0 |
+| <a name="provider_random"></a> [random](#provider\_random) | n/a |
 
 ## Modules
 
@@ -41,7 +41,7 @@
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | <a name="input_data_product"></a> [data\_product](#input\_data\_product) | Data product object variable that hold parameters | <pre>object({<br>    name        = string<br>    domain      = string<br>    environment = optional(list(string), ["dev", "prod"])<br>    tech_lead_cred = optional(object({<br>      github = optional(string)<br>      google = optional(string)<br>    }))<br>  })</pre> | n/a | yes |
-| <a name="input_system"></a> [system](#input\_system) | System environment variables passed through TF\_VARs parameter | <pre>object({<br>    environment         = string<br>    organization_id     = string<br>    organization_name   = string<br>    organization_prefix = string<br>    region              = string<br>  })</pre> | n/a | yes |
+| <a name="input_system"></a> [system](#input\_system) | System environment variables passed through TF\_VARs parameter | <pre>object({<br>    environment         = string<br>    organization_id     = string<br>    organization_name   = string<br>    organization_prefix = string<br>    region              = string<br>    billing_account_id  = string<br>  })</pre> | n/a | yes |
 
 ## Outputs
 
