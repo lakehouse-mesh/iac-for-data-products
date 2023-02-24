@@ -1,0 +1,8 @@
+name: data-product-a
+domain: anerd-cdna-domain
+environment: 
+- dev
+- prod
+tech_lead_cred:
+  github: jjunior84
+  google: john@adorablenerds.art
