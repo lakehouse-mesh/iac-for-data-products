@@ -1,7 +1,10 @@
 ##################################################
 #####           Required Providers           #####
+#####            and Backend Init            #####
 ##################################################
 terraform {
+  backend "gcs" {
+  }
   required_providers {
     github = {
       source  = "integrations/github"
@@ -29,12 +32,25 @@ variable "system" {
 variable "data_product" {
   type        = string
   description = "Data Product to be created or updated"
+
+  validation {
+    condition     = fileexists("./config/${var.data_product}.yaml")
+    error_message = "Configuration file for data product ${var.data_product} not found"
+  }
 }
 
+##################################################
+#####       Call Data Product Factory        #####
+##################################################
+module "dp_factory" {
+  source = "../compositions/data_product_factory"
 
-resource "random_string" "random" {
-  length           = 16
-  special          = true
-  override_special = "/@£$"
+  data_product = yamldecode(file("${path.module}/config/${var.data_product}.yaml"))
+  system       = var.system
+
+  providers = {
+    github      = github
+    google      = google
+    google-beta = google-beta
+  }
 }
-

@@ -117,3 +117,9 @@ output "full_name" {
   value       = github_repository.mod_github_repository.full_name
   description = "A string of the form 'orgname/reponame'."
 }
+
+output "name" {
+  value       = github_repository.mod_github_repository.name
+  description = "A string of the form 'reponame'."
+}
+

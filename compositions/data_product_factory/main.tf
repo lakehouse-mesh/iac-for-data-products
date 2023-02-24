@@ -26,6 +26,7 @@ data "google_active_folder" "dp_domain_google_folder" {
   parent       = data.google_organization.dp_google_organization.name
 }
 
+
 ##################################################
 #####                 Helpers                #####
 ##################################################
@@ -48,7 +49,11 @@ resource "google_project" "dp_google_project" {
   project_id = "${var.system.organization_prefix}-${var.data_product.name}-${var.system.environment}"
   folder_id  = data.google_active_folder.dp_domain_google_folder.name
   provider   = google
+
+  billing_account = var.system.billing_account_id
 }
+
+
 
 # google storage bucket was not modularized, there is not need for that
 resource "google_storage_bucket" "dp_google_storage" {
@@ -161,6 +166,7 @@ module "dp_github_repository" {
   source   = "../../.modules/github_repository"
 
   repository_name = var.data_product.name
+  visibility      = "public"
   contributors = var.data_product.tech_lead_cred.github == null ? [] : [{
     type        = "user"
     contributor = var.data_product.tech_lead_cred.github
@@ -180,7 +186,15 @@ module "dp_github_repository" {
 resource "github_actions_secret" "dp_github_action_secrets" {
   for_each = toset(local.environment_optout || local.github_optout ? [] : [var.system.environment])
 
-  repository      = module.dp_github_repository[var.system.environment].full_name
-  secret_name     = "google-service-account-credentials"
-  encrypted_value = module.dp_google_service_account[var.system.environment].private_key
+  repository        = module.dp_github_repository[var.system.environment].name
+  secret_name       = "GCP_SA_CREDENTIALS"
+  enencrypted_value = module.dp_google_service_account[var.system.environment].private_key
+
+  depends_on = [
+    module.dp_google_service_account
+  ]
+
+  provider = github
 }
+
+

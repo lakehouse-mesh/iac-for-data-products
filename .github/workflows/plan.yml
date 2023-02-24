@@ -35,22 +35,44 @@ jobs:
     if: github.event.review.state != 'approved'
     outputs:
       matrix: ${{ steps.matrix.outputs.value }}
+      exec_plan: ${{ steps.matrix.outputs.exec_plan }}
 
     defaults:
       run:
         shell: bash
 
     steps:
+      # Checkout the repository to the GitHub Actions runner
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      # Checkout the repository to the GitHub Actions runner
       - id: matrix
+        working-directory: ${{ env.TERRAFORM_DIRECTORY }}
+        env:
+          GITHUB_REF: ${{ github.ref }}
+          TARGET_BRANCH: ${{ github.base_ref }}    
         run: |
-          echo 'value=["data-product-a", "data-product-b"]' >> $GITHUB_OUTPUT
+          if git diff --name-only HEAD^1 HEAD | grep "^config" > /dev/null 2>&1; then
+            git diff --name-only HEAD | \
+              grep "^config" | \
+              sort | uniq |  \
+              xargs -I{} basename {} .yaml | \
+              awk '{printf "\"%s\", ", $0}' | sed 's/, $/\n/; 1s/^/value=[/' | sed '$s/$/]/' >> $GITHUB_OUTPUT
+            echo 'exec_plan=1' >> $GITHUB_OUTPUT
+          else
+              echo "No data products changes found."
+              echo 'value=[]' >> $GITHUB_OUTPUT
+              echo 'exec_plan=0' >> $GITHUB_OUTPUT
+          fi
+
 
 
   # Get data product that has changed or created in the PR
   TerraformPlan:
     needs: [ GetDataProducts ]
     runs-on: ubuntu-latest
-    if: github.event.review.state != 'approved'
+    if: github.event.review.state != 'approved' && needs.GetDataProducts.outputs.exec_plan == 1
 
     # Use the Bash shell regardless whether the GitHub Actions runner is ubuntu-latest, macos-latest, or windows-latest
     defaults:
@@ -80,10 +102,13 @@ jobs:
         echo "BRANCH=$TARGET_BRANCH" >> $GITHUB_OUTPUT
         if [ "$TARGET_BRANCH" = "main" ]; then
           echo "${{ secrets.TF_PROD }}" | base64 --decode > variables.tfvars
+          echo "ENVIRONMENT=dev" >> $GITHUB_OUTPUT 
         elif [ "$TARGET_BRANCH" = "dev" ]; then
           echo "${{ secrets.TF_DEV }}" | base64 --decode > variables.tfvars
+          echo "ENVIRONMENT=prod" >> $GITHUB_OUTPUT 
         else
           echo "${{ secrets.TF_SANDBOX }}" | base64 --decode > variables.tfvars
+          echo "ENVIRONMENT=sandbox" >> $GITHUB_OUTPUT 
         fi  
 
     # Install the latest version of Terraform CLI and configure the Terraform CLI configuration file with a Terraform Cloud user API token
@@ -98,7 +123,12 @@ jobs:
     - name: Terraform Init
       id: init
       working-directory: ${{ env.TERRAFORM_DIRECTORY }}
-      run: terraform init
+      env:
+        GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+      run: |
+        terraform init --reconfigure \
+          -backend-config=bucket=${{ secrets.BACKEND_BUCKET }} \
+          -backend-config=prefix=${{ steps.branch_check.outputs.ENVIRONMENT }}/${{ matrix.value }}
 
             
     - name: Terraform Plan
@@ -133,7 +163,4 @@ jobs:
           ```
           ${{ steps.plan.outputs.plan }}
           ```
-          Plan saved to GH artifacts.             
-
-
-          
+          Plan saved to GH artifacts.

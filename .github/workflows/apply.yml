@@ -22,21 +22,39 @@ jobs:
     if: github.event.pull_request.merged == true
     outputs:
       matrix: ${{ steps.matrix.outputs.value }}
+      exec_apply: ${{ steps.matrix.outputs.exec_apply }}
 
     defaults:
       run:
         shell: bash
 
     steps:
+      # Checkout the repository to the GitHub Actions runner
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      # Get 
       - id: matrix
+        working-directory: ${{ env.TERRAFORM_DIRECTORY }}
         run: |
-          echo 'value=["data-product-a", "data-product-b"]' >> $GITHUB_OUTPUT
+          if git diff --name-only HEAD^1 HEAD | grep "^config" > /dev/null 2>&1; then
+            git diff --name-only HEAD | \
+              grep "^config" | \
+              sort | uniq |  \
+              xargs -I{} basename {} .yaml | \
+              awk '{printf "\"%s\", ", $0}' | sed 's/, $/\n/; 1s/^/value=[/' | sed '$s/$/]/' >> test
+            echo 'exec_apply=1' >> $GITHUB_OUTPUT
+          else
+              echo "No data products changes found."
+              echo 'value=[]' >> test
+              echo 'exec_apply=0' >> $GITHUB_OUTPUT
+          fi
 
 
   TerraformApply:
     needs: [ GetDataProducts ]  
     runs-on: ubuntu-latest
-    if: github.event.pull_request.merged == true
+    if: github.event.pull_request.merged == true && needs.GetDataProducts.outputs.exec_apply == 1
 
     # Use the Bash shell regardless whether the GitHub Actions runner is ubuntu-latest, macos-latest, or windows-latest
     defaults:
@@ -62,6 +80,13 @@ jobs:
         echo "Pull Request $PR_NUMBER merged, running on branch ${{ env.TARGET_BRANCH }}"
         echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_OUTPUT
         echo "BRANCH=$TARGET_BRANCH" >> $GITHUB_OUTPUT
+        if [ "$TARGET_BRANCH" = "main" ]; then
+          echo "ENVIRONMENT=dev" >> $GITHUB_OUTPUT 
+        elif [ "$TARGET_BRANCH" = "dev" ]; then
+          echo "ENVIRONMENT=prod" >> $GITHUB_OUTPUT 
+        else
+          echo "ENVIRONMENT=sandbox" >> $GITHUB_OUTPUT 
+        fi          
 
 
     # Install the latest version of Terraform CLI and configure the Terraform CLI configuration file with a Terraform Cloud user API token
@@ -76,7 +101,12 @@ jobs:
     - name: Terraform Init
       id: init
       working-directory: ${{ env.TERRAFORM_DIRECTORY }}
-      run: terraform init
+      env:
+        GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+      run: |
+        terraform init --reconfigure \
+          -backend-config=bucket=${{ secrets.BACKEND_BUCKET }} \
+          -backend-config=prefix=${{ steps.pr-id.outputs.ENVIRONMENT }}/${{ matrix.value }}
 
 
     # Download tf_plan generate during CI processs
