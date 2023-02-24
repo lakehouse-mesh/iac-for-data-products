@@ -28,9 +28,19 @@ jobs:
         shell: bash
 
     steps:
+      # Checkout the repository to the GitHub Actions runner
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      # Get 
       - id: matrix
+        working-directory: ${{ env.TERRAFORM_DIRECTORY }}
         run: |
-          echo 'value=["data-product-a", "data-product-b"]' >> $GITHUB_OUTPUT
+          git diff --name-only HEAD^1 HEAD | \
+            grep "^config" | \
+            sort | uniq |  \
+            xargs -I{} basename {} .yaml | \
+            awk '{printf "\"%s\", ", $0}' | sed 's/, $/\n/; 1s/^/value=[/' | sed '$s/$/]/' >> $GITHUB_OUTPUT
 
 
   TerraformApply:
