@@ -35,6 +35,7 @@ jobs:
     if: github.event.review.state != 'approved'
     outputs:
       matrix: ${{ steps.matrix.outputs.value }}
+      exec_plan: ${{ steps.matrix.outputs.exec_plan }}
 
     defaults:
       run:
@@ -57,10 +58,12 @@ jobs:
               grep "^config" | \
               sort | uniq |  \
               xargs -I{} basename {} .yaml | \
-              awk '{printf "\"%s\", ", $0}' | sed 's/, $/\n/; 1s/^/value=[/' | sed '$s/$/]/' >> test
+              awk '{printf "\"%s\", ", $0}' | sed 's/, $/\n/; 1s/^/value=[/' | sed '$s/$/]/' >> $GITHUB_OUTPUT
+            echo 'exec_plan=1' >> $GITHUB_OUTPUT
           else
               echo "No data products changes found."
-              echo 'value=[]' >> test
+              echo 'value=[]' >> $GITHUB_OUTPUT
+              echo 'exec_plan=0' >> $GITHUB_OUTPUT
           fi
 
 
@@ -69,7 +72,7 @@ jobs:
   TerraformPlan:
     needs: [ GetDataProducts ]
     runs-on: ubuntu-latest
-    if: github.event.review.state != 'approved'
+    if: github.event.review.state != 'approved' && needs.GetDataProducts.outputs.exec_plan == 1
 
     # Use the Bash shell regardless whether the GitHub Actions runner is ubuntu-latest, macos-latest, or windows-latest
     defaults:

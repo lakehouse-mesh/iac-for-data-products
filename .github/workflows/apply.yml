@@ -22,6 +22,7 @@ jobs:
     if: github.event.pull_request.merged == true
     outputs:
       matrix: ${{ steps.matrix.outputs.value }}
+      exec_apply: ${{ steps.matrix.outputs.exec_apply }}
 
     defaults:
       run:
@@ -42,16 +43,18 @@ jobs:
               sort | uniq |  \
               xargs -I{} basename {} .yaml | \
               awk '{printf "\"%s\", ", $0}' | sed 's/, $/\n/; 1s/^/value=[/' | sed '$s/$/]/' >> test
+            echo 'exec_apply=1' >> $GITHUB_OUTPUT
           else
               echo "No data products changes found."
               echo 'value=[]' >> test
+              echo 'exec_apply=0' >> $GITHUB_OUTPUT
           fi
 
 
   TerraformApply:
     needs: [ GetDataProducts ]  
     runs-on: ubuntu-latest
-    if: github.event.pull_request.merged == true
+    if: github.event.pull_request.merged == true && needs.GetDataProducts.outputs.exec_apply == 1
 
     # Use the Bash shell regardless whether the GitHub Actions runner is ubuntu-latest, macos-latest, or windows-latest
     defaults:
