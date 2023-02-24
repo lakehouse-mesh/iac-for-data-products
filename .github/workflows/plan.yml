@@ -52,11 +52,17 @@ jobs:
           GITHUB_REF: ${{ github.ref }}
           TARGET_BRANCH: ${{ github.base_ref }}    
         run: |
-          git diff --name-only HEAD | \
-            grep "^config" | \
-            sort | uniq |  \
-            xargs -I{} basename {} .yaml | \
-            awk '{printf "\"%s\", ", $0}' | sed 's/, $/\n/; 1s/^/value=[/' | sed '$s/$/]/' >> $GITHUB_OUTPUT
+          if git diff --name-only HEAD^1 HEAD | grep "^config" > /dev/null 2>&1; then
+            git diff --name-only HEAD | \
+              grep "^config" | \
+              sort | uniq |  \
+              xargs -I{} basename {} .yaml | \
+              awk '{printf "\"%s\", ", $0}' | sed 's/, $/\n/; 1s/^/value=[/' | sed '$s/$/]/' >> test
+          else
+              echo "No data products changes found."
+              echo 'value=[]' >> test
+          fi
+
 
 
   # Get data product that has changed or created in the PR
@@ -154,7 +160,4 @@ jobs:
           ```
           ${{ steps.plan.outputs.plan }}
           ```
-          Plan saved to GH artifacts.             
-
-
-          
+          Plan saved to GH artifacts.
