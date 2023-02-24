@@ -52,7 +52,7 @@ jobs:
           GITHUB_REF: ${{ github.ref }}
           TARGET_BRANCH: ${{ github.base_ref }}    
         run: |
-          git diff --name-only $TARGET_BRANCH HEAD | \
+          git diff --name-only HEAD | \
             grep "^config" | \
             sort | uniq |  \
             xargs -I{} basename {} .yaml | \
